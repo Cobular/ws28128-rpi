@@ -223,7 +223,7 @@ unsigned int NeoPixel::mem_phys_to_virt(uint32_t phys){
 
     for (i = 0; i < NUM_PAGES; i++) {
         if (page_map[i].physaddr == pg_addr) {
-            return (uint32_t)virtbase + i * PAGE_SIZE + pg_offset;
+            return (uint32_t)(size_t)virtbase + i * PAGE_SIZE + pg_offset;
         }
     }
     fatal("Failed to reverse map phys addr %08x\n", phys);
@@ -237,7 +237,7 @@ void* NeoPixel::map_peripheral(uint32_t base, uint32_t len){
 
     if (fd < 0)
         fatal("Failed to open /dev/mem: %m\n");
-    vaddr = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base);
+    vaddr = mio::make_mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base);
     if (vaddr == MAP_FAILED)
         fatal("Failed to map peripheral at 0x%08x: %m\n", base);
     close(fd);
@@ -314,7 +314,7 @@ void NeoPixel::initHardware(){
     SET_GPIO_ALT(18, 5);
 
     // Allocate memory for the DMA control block & data to be sent
-    virtbase = (uint8_t*) mmap(
+    virtbase = (uint8_t*) mio::make_mmap(
         NULL,
         NUM_PAGES * PAGE_SIZE,
         PROT_READ | PROT_WRITE,
@@ -329,7 +329,7 @@ void NeoPixel::initHardware(){
         fatal("Failed to mmap physical pages: %m\n");
     }
 
-    if ((unsigned long)virtbase & (PAGE_SIZE-1)) {
+    if ((unsigned long)(size_t)virtbase & (PAGE_SIZE-1)) {
         fatal("Virtual address is not page aligned\n");
     }
 
@@ -346,7 +346,7 @@ void NeoPixel::initHardware(){
         fatal("Failed to open %s: %m\n", pagemap_fn);
     }
 
-    if (lseek(fd, (unsigned long)virtbase >> 9, SEEK_SET) != (unsigned long)virtbase >> 9) {
+    if (lseek(fd, (unsigned long)(size_t)virtbase >> 9, SEEK_SET) != (unsigned long)(size_t)virtbase >> 9) {
         fatal("Failed to seek on %s: %m\n", pagemap_fn);
     }
 
